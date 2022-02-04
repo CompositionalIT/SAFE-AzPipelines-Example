@@ -32,7 +32,7 @@ Target.create "Bundle" (fun _ ->
 Target.create "Azure" (fun _ ->
     let web = webApp {
         name "SAFEPipelines"
-        zip_deploy "deploy"
+        zip_deploy artifactDir
     }
     let deployment = arm {
         location Location.WestEurope
