@@ -31,7 +31,7 @@ Target.create "Bundle" (fun _ ->
 
 Target.create "Azure" (fun _ ->
     let web = webApp {
-        name "Pipelines"
+        name "SAFEPipelines"
         zip_deploy "deploy"
     }
     let deployment = arm {
@@ -40,7 +40,7 @@ Target.create "Azure" (fun _ ->
     }
 
     deployment
-    |> Deploy.execute "Pipelines" Deploy.NoParameters
+    |> Deploy.execute "SAFEPipelines" Deploy.NoParameters
     |> ignore
 )
 
@@ -68,7 +68,6 @@ let dependencies = [
     "Clean"
         ==> "InstallClient"
         ==> "Bundle"
-        ==> "Azure"
 
     "Clean"
         ==> "InstallClient"
