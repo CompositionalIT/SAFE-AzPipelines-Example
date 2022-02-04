@@ -1,0 +1,65 @@
+pool:
+  vmImage: 'windows-latest' # Use a Windows build host 
+
+variables:
+  isMain: $[eq(variables['Build.SourceBranch'], 'refs/heads/main')] # Set a variable to detect if we are on the main branch
+  appArtifact: "app" # Set a variable which is used to name the published app
+
+stages:
+
+- stage: CI # This stage just builds and tests the app. It runs on every push to every branch.
+  displayName: CI
+  jobs:
+  - job: Build
+    displayName: Build and publish artifact
+    steps:
+    - script: dotnet tool restore
+      displayName: Restore dotnet local tools
+    - script: dotnet paket restore
+      displayName: Download nuget packages 
+    - script: dotnet restore Pipelines.sln # Set your solution name here
+      displayName: Restore nuget packages 
+    - script: npm install 
+      displayName: Restore npm packages
+    - task: MSBuild@1
+      displayName: 'Build Server.Tests project'
+      inputs:
+        solution: 'tests/Server/*.fsproj'
+        msbuildArchitecture: 'x64'
+        clean: true
+        restoreNugetPackages: false
+    - task: VSTest@2 # Requires that the project has the .net test adapter installed (see earlier in the article)
+      displayName: Run Server tests
+      inputs:
+        testSelector: 'testAssemblies' 
+        testAssemblyVer2: 'tests\Server\bin\Debug\net5.0\Server.Tests.dll'
+    - script: dotnet run Bundle # Create the app bundle
+      displayName: Bundle app
+    - publish: deploy # Publish the bundle as a pipeline artifact
+      artifact: $(appArtifact)
+
+- stage: CD  # This stage picks up the artifact from the CI stage and publishes it to Azure, along with the infrastructure
+  dependsOn: CI
+  condition: and(succeeded(), eq(variables.isMain, true)) # Only run if CI stage succeeded *and* we are on the main branch
+  displayName: CD
+  jobs:
+  - deployment: ContinuousDeploy
+    displayName: Deploy to dev test environment
+    environment: CD # The environment we created earlier
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current # Download the artifact from the previous stage. 
+            artifact: $(appArtifact)
+          - checkout: self # This stage also needs access to the repo to run the deploy script
+          - task: AzureCLI@2 # The Azure CLI task allows publishing resources to Azure
+            inputs:
+              azureSubscription: 'Microsoft Azure Sponsorship - MVP(6de41c46-1ff3-440f-9f74-abf070a7e88e)' # Replace with your sub.
+              scriptType: 'batch'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                set artifact-dir=$(Pipeline.Workspace)/app
+                dotnet tool restore
+                dotnet run Azure
+              workingDirectory: '$(Build.SourcesDirectory)'
