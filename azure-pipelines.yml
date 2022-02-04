@@ -55,7 +55,7 @@ stages:
           - checkout: self # This stage also needs access to the repo to run the deploy script
           - task: AzureCLI@2 # The Azure CLI task allows publishing resources to Azure
             inputs:
-              azureSubscription: 'Microsoft Azure Sponsorship - MVP(6de41c46-1ff3-440f-9f74-abf070a7e88e)' # Replace with your sub.
+              azureSubscription: 'My Azure Sponsorship' # Replace with your sub.
               scriptType: 'batch'
               scriptLocation: 'inlineScript'
               inlineScript: |
